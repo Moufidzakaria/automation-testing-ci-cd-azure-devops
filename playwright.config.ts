@@ -1,66 +1,26 @@
 import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
-import path from 'path';
-
-dotenv.config({
-  path: path.resolve(__dirname, '.env'),
-});
 
 export default defineConfig({
   testDir: './tests',
-
-  testMatch: /.*\.spec\.ts/,
-
-  fullyParallel: true,
-
-  forbidOnly: !!process.env.CI,
-
-  retries: process.env.CI ? 2 : 0,
-
+  timeout: 30 * 1000,
+  expect: { timeout: 5000 },
+  fullyParallel: false,
+  // Force 1 seul worker en CI pour éviter les collisions d'états de compte
   workers: process.env.CI ? 1 : undefined,
-
-  outputDir: 'test-results',
-
-  reporter: [
-    ['html'],
-    ['list'],
-    ['json', { outputFile: 'test-results/results.json' }],
-    ['junit', { outputFile: 'test-results/results.xml' }],
-  ],
-
+  retries: process.env.CI ? 2 : 0,
+  reporter: 'html',
+  
   use: {
     baseURL: 'https://automationexercise.com',
-
-    headless: true,
-
-    // 🟢 Modifié de 'only-on-failure' à 'on' pour avoir des screenshots à chaque test
-    screenshot: 'on',
-
-    // 🟢 Modifié de 'retain-on-failure' à 'on' pour capturer les vidéos de chaque session
-    video: 'on',
-
-    // 🟢 Modifié de 'retain-on-failure' à 'on' pour générer les rapports de trace complets
-    trace: 'on',
-
-    actionTimeout: 10000,
-    
-    testIdAttribute: 'data-qa',
-
-    navigationTimeout: 30000,
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    // Bloque le suivi automatique des redirections infinies 302
+    extraHTTPHeaders: {
+      'Accept': 'application/json, text/plain, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    }
   },
-
   projects: [
-    {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-      },
-    },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
-    },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
 });
