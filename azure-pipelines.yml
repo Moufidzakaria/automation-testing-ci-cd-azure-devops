@@ -1,0 +1,51 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: Run_Playwright_Tests
+  timeoutInMinutes: 60
+  steps:
+  
+  # 1. Configuration de la version de Node.js
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+    displayName: 'Install Node.js'
+
+  # 2. Installation des dépendances (npm ci utilise le package-lock.json pour la stabilité)
+  - script: |
+      npm ci
+    displayName: 'Install Dependencies'
+
+  # 3. Installation des navigateurs requis par Playwright et de leurs dépendances système
+  - script: |
+      npx playwright install --with-deps
+    displayName: 'Install Playwright Browsers'
+
+  # 4. Exécution des tests Playwright
+  - script: |
+      npx playwright test
+    displayName: 'Run Playwright Tests'
+    env:
+      CI: 'true'
+
+  # 5. Publication du rapport Playwright sur Azure DevOps (s'exécute même en cas d'échec)
+  - task: PublishPipelineArtifact@1
+    condition: always()
+    inputs:
+      targetPath: '$(System.DefaultWorkingDirectory)/playwright-report'
+      artifact: 'playwright-report'
+      publishLocation: 'pipeline'
+    displayName: 'Publish Playwright Report Artifact'
+
+  # 6. Publication des résultats des tests (Optionnel, si tu génères un rapport au format JUnit)
+  - task: PublishTestResults@2
+    condition: always()
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/results.xml' # Assure-toi d'avoir configuré le reporter 'junit' dans playwright.config.ts si tu veux voir l'onglet "Tests" dans Azure
+      searchFolder: '$(System.DefaultWorkingDirectory)'
+    displayName: 'Publish Test Results to Azure'
